@@ -1,0 +1,51 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+url = "https://pypi.surromind.ai/simple"
+verify_ssl = true
+name = "surromind"
+
+[[source]]
+url = "https://flashinfer.ai/whl/cu121/torch2.3"
+verify_ssl = true
+name = "flashinfer"
+
+[packages]
+langchain-milvus = "==0.1.1"
+langchain-openai = "==0.1.15"
+python-dotenv = "==1.0.1"
+fastapi = "==0.111.0"
+sqlalchemy = "==2.0.31"
+pymysql = "==1.1.1"
+alembic = "==1.13.2"
+pydantic-settings = "==2.3.4"
+exceptiongroup = "1.2.2"
+mysql-connector-python = "==9.0.0"
+python-jose = "==3.3.0"
+python-multipart = "==0.0.9"
+cryptography = "*"
+uvicorn = "*"
+mlflow = "==2.15.1"
+requests = "*"
+transformers = "==4.44.2"
+torch = "*"
+torchvision = "*"
+torchaudio = "*"
+langchain = "==0.2.11"
+llama-cpp-python = "==0.2.89"
+boto3 = "*"
+surrochat = {version="==0.0.10", index="surromind"}
+pymilvus = {extras = ["model"], version = "==2.4.4"}
+beautifulsoup4 = "==4.12.3"
+flagembedding = "==1.2.11"
+sentence-transformers = "==3.0.1"
+peft = "==0.13.0"
+
+[dev-packages]
+pre-commit = "3.7.1"
+
+[requires]
+python_version = "3.10"
