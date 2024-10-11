@@ -3,20 +3,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import api_router
 
-SWAGGER_TITLE = "SURROMIND Chatbot"
-SWAGGER_SUMMARY = "생성 AI 솔루션 팀 Chatbot MVP v0.1"
+SWAGGER_TITLE = "AI-PaaS RAG Workflow"
+SWAGGER_SUMMARY = "RAG Workflow Backend Server"
 SWAGGER_DESCRIPTION = """
-Demo Page
-* [Chatbot](https://dev-surrochat-ui.surromind.ai/)
-* [Backoffice](https://dev-surrochat-backoffice.surromind.ai/)
-
-프로젝트 구성 ([개발환경 컨플루언스](https://surromind.atlassian.net/wiki/spaces/SURROMIND/pages/171311198))
-1. RestfulAPI Server : FastAPI
-2. Chat Model Module : Langchain
-3. Storage
-    1) Document DB : OpenSearch (2.14.0)
-    2) Vector DB : Milvus (2.4.4)
-    3) RDBMS : MariaDB (10.11)
+주요 기능
+1. Model
+    - Pre-trained, Fine-tuned, embedding, Re-rank Model을 등록하고 불러옵니다.
+2. Knowledge
+    - RAG(검색 증강 기술)에서 활용할 지식 데이터를 저장하고 검색에 활용 합니다.
+    - 저장소 : VectorDB(Milvus)
+3. Prompt
+    - Prompt를 사용자가 생성하고 solution에 활용할 수 있도록 합니다.
+4. Solution
+    - Chat, workflow 등과 같은 Solution을 생성합니다.
 """
 
 
