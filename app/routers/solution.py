@@ -78,8 +78,10 @@ def generate_text(
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
     # TODO: max_length 수정
-    result = pipe(prompt, max_length=1024)
-    return result[0]["generated_text"]
+    result = pipe(messages, max_length=1024)
+
+    # TODO: Langchain 적용하기
+    return result[0]["generated_text"][-1]
 
 
 @solution_router.post("", response_model=SolutionReadSchema)
