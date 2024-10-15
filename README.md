@@ -44,6 +44,13 @@ RAG-Workflow의 시스템 아키텍처는 아래와 같습니다:
 3. **응답 생성**: 추출된 정보를 기반으로 RAG 모델을 사용해 최종 응답을 생성합니다.
 4. **모델 및 데이터 관리**: MLFlow를 통해 학습된 모델을 관리하고, 필요시 모델 업데이트 또는 새로운 데이터 추가가 가능합니다.
 
+# DB Migration
+
+```shell
+alembic revision --autogenerate -m "Your message"
+alembic head
+```
+
 # Get Started
 
 # License

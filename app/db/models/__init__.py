@@ -10,3 +10,4 @@ from .knowledge import (
 from .model import Model, ModelFormat, ModelProvider, ModelRegistry, ModelType
 from .prompt import Prompt, PromptVariable
 from .user import User
+from .solution import Solution, SolutionConfig
