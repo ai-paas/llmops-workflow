@@ -12,6 +12,8 @@ class RetrievalRequestSchema(BaseModel):
     search_type_id: int
     top_k: int
     threshold_score: float
+    dense_weight: float
+    sparse_weight: float
 
 
 class RetrievalResponseSchema(BaseModel):

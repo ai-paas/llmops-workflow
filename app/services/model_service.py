@@ -13,7 +13,7 @@ from schemas.model import (
 )
 from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
-from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, pipeline
 from util.model_registry import ModelLoader, ModelRegistry
 
 
@@ -37,7 +37,7 @@ class ModelService:
             messages = [
                 {"role": "user", "content": "Who are you?"},
             ]
-            result = pipeline(messages)
+            result = pipeline(messages, max_length=1024)
         elif model_format_id == 3:
             loaded_model = ModelLoader.load_pyfunc(model_uri)
             messages = [
@@ -48,6 +48,11 @@ class ModelService:
         else:
             result = ""
         return result
+
+    staticmethod
+    def load_transformers(model_uri: str):
+        loaded_pipe = ModelLoader.load_transformers(model_uri)
+        return loaded_pipe
 
 
 class HuggingFaceModelService:

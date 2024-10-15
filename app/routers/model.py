@@ -3,6 +3,7 @@ from typing import Annotated, Optional
 
 from config.db.connect import SessionDepends
 from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi.security import APIKeyHeader
 from schemas.model import ModelBaseSchema, ModelReadSchema
 from services.model_service import (
     CustomModelService,
@@ -10,8 +11,12 @@ from services.model_service import (
     ModelService,
 )
 from sqlalchemy.orm import Session
+from config.settings import get_settings
 
 model_router = APIRouter(prefix="/models", tags=["Models"])
+
+settings = get_settings()
+# API_KEY_HEADER = APIKeyHeader(name="X-API-Key")
 
 
 # TODO: 책임 분리 필요.
@@ -83,7 +88,21 @@ def read_models(skip: int = 0, limit: int = 10, db: Session = SessionDepends):
     return models
 
 
-@model_router.get("/{model_id}/test")
-def test_models(model_id: int, model_format_id: int, model_uri: str):
-    result = ModelService().validate(model_format_id, model_uri)
-    return model_uri
+@model_router.get("/{model_id}/load")
+def load_model(db: Session = SessionDepends, *, model_id: int):
+    db_model = ModelService().get(db, model_id)
+    model_uri = db_model.model_registry.model_uri
+    loaded_pipeline = ModelService.load_transformers(model_uri)
+    model = loaded_pipeline.model
+    tokenizer = loaded_pipeline.tokenizer
+    # TODO: User Login 실제로 해서 Model Load하기
+    user_id = "default"
+    value = {
+        "model": model,
+        "tokenizer": tokenizer
+    }
+    settings.add_user_model(user_id, value)
+    return {
+        "model": f"{db_model.name}",
+        "user_id": user_id,
+    }

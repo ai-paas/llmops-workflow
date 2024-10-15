@@ -93,7 +93,7 @@ class KnowledgeDatasetService:
     @staticmethod
     def save_to_storage(file: UploadFile, collection_name: str):
         # TODO: 하드코딩 제거
-        bucket_name = "gen_ai_solution"
+        bucket_name = "ai-paas"
         file_name = file.filename
         file_path = f"{collection_name}/{file_name}"
         ext = get_file_extension(file)

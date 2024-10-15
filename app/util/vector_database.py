@@ -2,7 +2,14 @@ from typing import Any
 
 import numpy as np
 from config.settings import get_settings
-from pymilvus import DataType, MilvusClient
+from pymilvus import (
+    AnnSearchRequest,
+    Collection,
+    DataType,
+    MilvusClient,
+    WeightedRanker,
+    connections,
+)
 
 settings = get_settings()
 
@@ -204,39 +211,98 @@ class MilvusManager:
             return False
         return True
 
-    @classmethod
-    def consine_search(cls, embeded_query: np.ndarray, collection_name: str, top_k: int = 5):
-        """
-        Milvus에서 COSINE 유사도를 사용하여 벡터 검색을 수행하는 메서드.
 
-        이 메서드는 주어진 쿼리 벡터(임베딩)를 기반으로 Milvus 컬렉션에서 가장 유사한 벡터들을 검색합니다.
-        검색 결과로는 지정된 필드(`text`)와 함께 상위 k개의 결과를 반환합니다.
+class MilvusSearchManager:
+    def __init__(self, collection_name: str, top_k: int):
+        """
+        MilvusSearchManager 클래스의 생성자. 주어진 컬렉션 이름과 상위 k개의 결과 제한을 설정하고,
+        Milvus에 연결하여 컬렉션을 초기화합니다.
 
         Args:
-            embeded_query (np.ndarray): 검색할 임베딩 벡터. numpy 배열 형태로 전달됩니다.
-            collection_name (str): 검색을 수행할 Milvus 컬렉션의 이름.
-            top_k (int, optional): 검색 결과로 반환할 상위 k개의 유사 벡터 수. 기본값은 5입니다.
+            collection_name (str): 사용할 Milvus 컬렉션의 이름.
+            top_k (int): 검색 시 반환할 상위 k개의 결과 수.
+        """
+        self.connect_to_milvus()
+        self._collection = Collection(collection_name)
+        self._top_k = top_k
+        self._dense_search_param = {"metric_type": "COSINE", "params": {}}
+        self._sparse_search_param = {"metric_type": "IP", "params": {}}
+
+    @staticmethod
+    def connect_to_milvus():
+        """
+        Milvus 서버에 연결합니다. 연결 정보는 환경 변수에서 설정된 값을 사용합니다.
+        """
+        connections.connect(
+            uri=f"http://{settings.MILVUS_DB_HOST}:{settings.MILVUS_DB_PORT}",
+            token=f"{settings.MILVUS_DB_USERNAME}:{settings.MILVUS_DB_PASSWORD}",
+            db_name=settings.MILVUS_DB_NAME,
+        )
+
+    def dense_search(self, embeded_query: np.ndarray):
+        """
+        주어진 밀집(dense) 임베딩을 기반으로 Milvus에서 검색을 수행합니다.
+
+        Args:
+            embeded_query (np.ndarray): 검색에 사용할 밀집 임베딩 벡터.
 
         Returns:
-            List[Dict]: 검색된 결과를 포함하는 리스트. 각 결과는 벡터와 관련된 필드를 포함합니다.
-            '''python
-            [
-                {
-                    "id": int,
-                    "distance": float,
-                    "entity": {
-                        "text": str
-                    }
-                },
-                ...
-            ]
-            '''
+            list: 검색된 결과를 반환합니다.
         """
-        search_results = cls._client.search(
-            collection_name=collection_name,  # 컬렉션 이름
-            data=embeded_query,  # 검색할 임베딩 벡터
-            anns_field="dense_vector",  # 검색할 필드 (dense_vector)
-            limit=top_k,  # top_k 검색 결과 반환
-            output_fields=["text"],  # 반환할 필드
+        search_results = self._collection.search(
+            embeded_query,
+            anns_field="dense_vector",
+            limit=self._top_k,
+            output_fields=["text"],
+            param=self._dense_search_param,
+        )
+        return search_results
+
+    def sparse_search(self, embeded_query: np.ndarray):
+        """
+        주어진 희소(sparse) 임베딩을 기반으로 Milvus에서 검색을 수행합니다.
+
+        Args:
+            embeded_query (np.ndarray): 검색에 사용할 희소 임베딩 벡터.
+
+        Returns:
+            list: 검색된 결과를 반환합니다.
+        """
+        search_results = self._collection.search(
+            embeded_query,
+            anns_field="sparse_vector",
+            limit=self._top_k,
+            output_fields=["text"],
+            param=self._sparse_search_param,
+        )
+        return search_results
+
+    def hybrid_search(
+        self,
+        dense_embeded_query: np.ndarray,
+        sparse_embeded_query: np.ndarray,
+        dense_weight=0.6,
+        sparse_weight=0.4,
+    ):
+        """
+        밀집(dense) 및 희소(sparse) 임베딩을 결합하여 하이브리드 검색을 수행합니다. 각 검색 결과에
+        가중치를 부여하여 순위를 재조정합니다.
+
+        Args:
+            dense_embeded_query (np.ndarray): 밀집 임베딩 벡터.
+            sparse_embeded_query (np.ndarray): 희소 임베딩 벡터.
+            sparse_weight (float, optional): 희소 임베딩 결과에 부여할 가중치. 기본값은 0.6.
+            dense_weight (float, optional): 밀집 임베딩 결과에 부여할 가중치. 기본값은 0.4.
+
+        Returns:
+            list: 하이브리드 검색을 통해 얻은 결과를 반환합니다.
+        """
+        dense_req = AnnSearchRequest(dense_embeded_query, "dense_vector", self._dense_search_param, limit=self._top_k)
+        sparse_req = AnnSearchRequest(
+            sparse_embeded_query, "sparse_vector", self._sparse_search_param, limit=self._top_k
+        )
+        rerank = WeightedRanker(dense_weight, sparse_weight)
+        search_results = self._collection.hybrid_search(
+            [dense_req, sparse_req], rerank=rerank, limit=self._top_k, output_fields=["text"]
         )
         return search_results

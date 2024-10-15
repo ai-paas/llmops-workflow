@@ -1,6 +1,7 @@
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,6 +56,8 @@ class Settings(BaseSettings):
     MILVUS_DB_NAME: str
     MILVUS_ADMIN_PORT: str
 
+    USER_MODELS: dict[str, dict] = {}
+
     @property
     def get_db_uri(self) -> str:
         """Environment variables로부터 DB 정보를 받아와 URI를 반환"""
@@ -63,6 +66,13 @@ class Settings(BaseSettings):
     @property
     def get_clean_rdb_type(self) -> str:
         return RDBName(self.DB_TYPE).name
+
+    @property
+    def user_models(self) -> dict[str, dict]:
+        return self.USER_MODELS
+
+    def add_user_model(self, key: str, value: Any):
+        self.USER_MODELS[key] = value
 
 
 @lru_cache

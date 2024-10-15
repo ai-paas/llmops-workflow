@@ -130,7 +130,7 @@ async def download_dataset(knowledge_id: int, path: str, db: Session = SessionDe
         StreamingResponse: 사용자가 다운로드할 수 있는 파일 스트림을 반환합니다.
     """
     # TODO: 하드코딩 제거
-    bucket_name = "gen_ai_solution"
+    bucket_name = "ai-paas"
     file_stream = KnowledgeDatasetService.get_file_object(bucket_name, path)
     _, file_name = path.split("/")
     file_name = quote(file_name)
