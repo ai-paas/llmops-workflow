@@ -71,8 +71,8 @@ class HuggingFaceModelService:
             model = self.load_gguf(repo_id, "gemma-2-2b-it.Q8_0.gguf")
             run_id, artifact_uri, model_version, model_uri = ModelRegistry().log_pyfunc(model, repo_id)
         elif model_format_id == 4:  # bge m3
-            model = self.load_bgem3flag(repo_id)
-            run_id, artifact_uri, model_version, model_uri = ModelRegistry().log_pyfunc(model, repo_id)
+            # model = self.load_bgem3flag(repo_id)
+            run_id, artifact_uri, model_version, model_uri = ModelRegistry().log_bge_embedding(repo_id)
         else:
             print("Error!!!")
 

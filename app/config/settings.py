@@ -56,7 +56,8 @@ class Settings(BaseSettings):
     MILVUS_DB_NAME: str
     MILVUS_ADMIN_PORT: str
 
-    USER_MODELS: dict[str, dict] = {}
+    LOADED_LLM: dict[str, dict] = {}
+    LOADED_EMBEDDING_MODEL: dict[str, dict] = {}
 
     @property
     def get_db_uri(self) -> str:
@@ -68,11 +69,14 @@ class Settings(BaseSettings):
         return RDBName(self.DB_TYPE).name
 
     @property
-    def user_models(self) -> dict[str, dict]:
-        return self.USER_MODELS
+    def loaded_models(self) -> dict[str, dict]:
+        return self.LOADED_MODELS
 
-    def add_user_model(self, key: str, value: Any):
-        self.USER_MODELS[key] = value
+    def add_llm(self, key: str, value: Any):
+        self.LOADED_LLM[key] = value
+
+    def add_embedding_model(self, key: str, value: Any):
+        self.LOADED_EMBEDDING_MODEL[key] = value
 
 
 @lru_cache

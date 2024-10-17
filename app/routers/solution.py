@@ -34,12 +34,31 @@ settings = get_settings()
 def generate_text(
     solution_id: int,
     prompt_id: int=1,
+    model_id: int=6,
     messages: list[dict[str, str]]=[
         {"role": "assistant", "content": "You are ahelpful assistant"},
         {"role": "user", "content": "Where is the capital of Korea?"}
     ], 
     db: Session = SessionDepends
 ):
+    """
+    주어진 솔루션 ID에 대해 텍스트를 생성합니다.
+
+    Args:
+        solution_id (int): 텍스트를 생성할 솔루션의 ID.
+        prompt_id (int): 사용할 프롬프트의 ID. 기본값은 1.
+        model_id (int): 사용할 모델의 ID. 기본값은 6.
+        messages (list[dict[str, str]]): 대화의 메시지 목록. 기본값은 사전 정의된 메시지들.
+        db (Session): 데이터베이스 세션 객체. 기본값은 SessionDepends.
+
+    Raises:
+        HTTPException: 모델이 로드되지 않은 경우 400 상태 코드와 함께 예외를 발생시킵니다.
+
+    Returns:
+        dict: 생성된 메시지와 관련된 컨텍스트를 포함하는 딕셔너리.
+            - message (str): 생성된 텍스트.
+            - context (str): 관련된 컨텍스트.
+    """
     # DB에서 필요정보 불러오기
     solution_obj = SolutionService().get(db, solution_id)
     solution_config = solution_obj.solution_config
@@ -68,20 +87,22 @@ def generate_text(
     messages[-1]["content"] = content
 
     # Model Load
-    # TODO: user_id를 받아오도록 수정
-    user_id = "default"
-    user_pipeline = settings.USER_MODELS.get(user_id, {})
-    if not user_pipeline:
-        raise HTTPException("Model을 먼저 Load 하세요.")
-    model = user_pipeline.get("model")
-    tokenizer = user_pipeline.get("tokenizer")
+    loaded_pipeline = settings.LOADED_LLM.get(model_id, {})
+    if not loaded_pipeline:
+        raise HTTPException(400, "Model을 먼저 Load 하세요.")
+    model = loaded_pipeline.get("model")
+    tokenizer = loaded_pipeline.get("tokenizer")
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
     # TODO: max_length 수정
-    result = pipe(messages, max_length=1024)
+    result = pipe(messages, max_length=4048)
 
     # TODO: Langchain 적용하기
-    return result[0]["generated_text"][-1]
+    # TODO: API검증용으로 retrieved context를 반환
+    return {
+        "message": result[0]["generated_text"][-1],
+        "context": context
+    }
 
 
 @solution_router.post("", response_model=SolutionReadSchema)
