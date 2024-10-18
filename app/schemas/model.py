@@ -20,7 +20,7 @@ class ModelReadSchema(BaseModel):
     model_provider: ModelProviderReadSchema
     model_type: ModelTypeReadSchema
     model_format: ModelFormatReadSchema
-    model_registry: ModelRegistryReadSchema
+    model_registry: ModelRegistryReadSchema | None
 
     class Config:
         from_attributes = True

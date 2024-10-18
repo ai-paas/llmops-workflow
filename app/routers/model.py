@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Any
 
 from config.db.connect import SessionDepends
 from fastapi import APIRouter, Form, HTTPException, UploadFile
@@ -76,6 +76,19 @@ def create_model(
 
 @model_router.get("/{model_id}", response_model=ModelReadSchema)
 def read_model(model_id: int, db: Session = SessionDepends):
+    """
+    주어진 모델 ID에 해당하는 모델을 데이터베이스에서 조회합니다.
+
+    Args:
+        model_id (int): 조회할 모델의 ID.
+        db (Session): 데이터베이스 세션 객체. 기본값은 SessionDepends.
+
+    Raises:
+        HTTPException: 모델을 찾을 수 없는 경우 404 상태 코드와 함께 예외를 발생시킵니다.
+
+    Returns:
+        ModelReadSchema: 조회된 모델 객체.
+    """
     db_model = ModelService().get(db, model_id)
     if db_model is None:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -84,25 +97,74 @@ def read_model(model_id: int, db: Session = SessionDepends):
 
 @model_router.get("", response_model=list[ModelReadSchema])
 def read_models(skip: int = 0, limit: int = 10, db: Session = SessionDepends):
+    """
+    데이터베이스에서 모델 목록을 조회합니다.
+
+    Args:
+        skip (int): 조회를 건너뛸 모델 수. 기본값은 0.
+        limit (int): 최대 조회할 모델 수. 기본값은 10.
+        db (Session): 데이터베이스 세션 객체. 기본값은 SessionDepends.
+
+    Returns:
+        list[ModelReadSchema]: 조회된 모델 목록.
+    """
     models = ModelService().get_multi(db)
     return models
 
 
-@model_router.get("/{model_id}/load")
+@model_router.post("/{model_id}/load")
 def load_model(db: Session = SessionDepends, *, model_id: int):
+    """
+    주어진 모델 ID에 해당하는 모델을 로드합니다.
+
+    Args:
+        model_id (int): 로드할 모델의 ID.
+        db (Session): 데이터베이스 세션 객체. 기본값은 SessionDepends.
+
+    Returns:
+        str: 로드된 모델의 이름을 포함하는 메시지.
+    """
     db_model = ModelService().get(db, model_id)
     model_uri = db_model.model_registry.model_uri
     loaded_pipeline = ModelService.load_transformers(model_uri)
     model = loaded_pipeline.model
     tokenizer = loaded_pipeline.tokenizer
-    # TODO: User Login 실제로 해서 Model Load하기
-    user_id = "default"
+
     value = {
+        "name": db_model.name,
         "model": model,
         "tokenizer": tokenizer
     }
-    settings.add_user_model(user_id, value)
-    return {
-        "model": f"{db_model.name}",
-        "user_id": user_id,
-    }
+    # TODO: 일단, llm으로 한정
+    settings.add_llm(model_id, value)
+    return f"{db_model.name} Loaded!",
+
+@model_router.get("models/loaded")
+def get_loaded_models(model_type: str="llm") -> dict[int, str]:
+    """
+    현재 로드된 모델 목록을 조회합니다.
+
+    Args:
+        model_type (str): 조회할 모델의 유형. 기본값은 "llm".
+
+    Returns:
+        dict[int, str]: 모델 ID와 모델 이름을 포함하는 딕셔너리.
+    """
+    result = {key: value.get("name") for key, value in settings.LOADED_LLM.items()}
+    return result
+
+@model_router.post("models/{model_id}/shutdown")
+def shutdown_model(model_id: int, model_type: str="llm") -> dict[int, str]:
+    """
+    주어진 모델 ID에 해당하는 모델을 종료합니다.
+
+    Args:
+        model_id (int): 종료할 모델의 ID.
+        model_type (str): 종료할 모델의 유형. 기본값은 "llm".
+
+    Returns:
+        dict[int, str]: 남아있는 모델 ID와 이름을 포함하는 딕셔너리.
+    """
+    del settings.LOADED_LLM[model_id]
+    result = {key: value.get("name") for key, value in settings.LOADED_LLM.items()}
+    return result

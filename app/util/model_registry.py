@@ -6,6 +6,7 @@ from config.settings import get_settings
 from mlflow import MlflowClient
 from mlflow.models import ModelSignature, infer_signature
 from mlflow.pyfunc import PythonModel
+from FlagEmbedding import BGEM3FlagModel
 
 settings = get_settings()
 
@@ -117,6 +118,24 @@ class ModelRegistry:
         return run_id, artifact_uri, model_version, model_uri
 
 
+    def log_bge_embedding(self, model_name: str="BAAI/bge-m3"):
+        mlflow.set_experiment(self._experiment_name)
+        with mlflow.start_run(run_name=model_name) as run:
+            repo_id = model_name
+            model_name = model_name.replace("/", "-")
+            mlflow.pyfunc.log_model(
+                artifact_path=model_name,
+                python_model=BGEEmbeddingWrapper(repo_id),
+                registered_model_name=model_name
+            )
+            run_id = run.info.run_id
+            artifact_uri = mlflow.get_artifact_uri()
+            model_version = self._client.get_latest_versions(name=model_name, stages=["None"])[0].version
+            model_uri = f"models:/{model_name}/{model_version}"
+        return run_id, artifact_uri, model_version, model_uri
+
+
+
 class ModelLoader:
     @staticmethod
     def load_transformers(model_uri: str):
@@ -139,6 +158,26 @@ class PyfuncModelWrapper(PythonModel):
         if self.model is None:
             raise ValueError("The model has not been loaded. " "Ensure that 'load_context' is properly executed.")
         return self.model
+
+
+class BGEEmbeddingWrapper(PythonModel):
+    def __init__(self, repo_id: str):
+        self.model = BGEM3FlagModel(repo_id, use_fp16=False)
+
+    def predict(self, context, model_input: list[str]):
+        if self.model is None:
+            raise ValueError(
+                "The model has not been loaded. "
+                "Ensure that 'load_context' is properly executed."
+            )
+        return self.model.encode(
+            model_input,
+            batch_size=12,
+            max_length=8192,
+            return_dense=True,
+            return_sparse=True,
+            return_colbert_vecs=False,
+        )
 
 
 class LlamaCppWrapper(PythonModel):
