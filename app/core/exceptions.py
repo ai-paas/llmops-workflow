@@ -29,7 +29,7 @@ class BaseCustomException(HTTPException):
 
 class ItemNotFoundException(BaseCustomException):
     status_code = status.HTTP_404_NOT_FOUND
-    detail = "Item NotFound"
+    detail = "Item NotFound Exception"
 
 
 class InsertDocumentException(BaseCustomException):

@@ -1,7 +1,10 @@
 # from core.middlewares import log_and_handle_exceptions
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from routers import api_router
+from fastapi.middleware.cors import CORSMiddleware 
+# from routers.v1 import api_router
+from routers.v2 import api_router
+from core.middlewares import LoggingMiddleware
+
 
 SWAGGER_TITLE = "AI-PaaS RAG Workflow"
 SWAGGER_SUMMARY = "RAG Workflow Backend Server"
@@ -34,5 +37,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(LoggingMiddleware)
 
 app.include_router(api_router)
