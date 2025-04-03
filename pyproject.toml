@@ -1,0 +1,18 @@
+[project]
+name = "rag-workflow"
+version = "0.1.0"
+description = "AI PaaS Project"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "boto3==1.37.25",
+    "fastapi==0.115.12",
+    "langchain-milvus==0.1.8",
+    "langgraph==0.3.22",
+    "mlflow==2.21.2",
+    "mysql-connector-python==9.2.0",
+    "pydantic-settings==2.8.1",
+    "pymysql>=1.1.1",
+    "python-dotenv==1.0.1",
+    "sqlalchemy==2.0.40",
+]

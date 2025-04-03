@@ -27,10 +27,10 @@ RUN apt-get update && apt-get install -y \
 RUN localedef -f UTF-8 -i ko_KR ko_KR.UTF-8
 
 # Copy only the Pipfile and Pipfile.lock to leverage Docker cache
-COPY Pipfile Pipfile.lock ./
+COPY pyproject.toml uv.lock ./
 
-# Install the dependencies via pipenv
-RUN pipenv install --deploy --system
+RUN uv sync
+
 FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
 WORKDIR /app
