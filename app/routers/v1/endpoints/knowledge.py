@@ -1,13 +1,11 @@
-from datetime import datetime
 from typing import Annotated
 from urllib.parse import quote
 
 from config.db.connect import SessionDepends
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import StreamingResponse
 from schemas.knowledge import (
     KnowledgeBaseSchema,
-    KnowledgeFileBaseSchema,
     KnowledgeFileReadSchema,
     KnowledgeReadSchema,
 )
