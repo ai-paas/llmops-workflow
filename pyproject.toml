@@ -15,4 +15,5 @@ dependencies = [
     "pymysql>=1.1.1",
     "python-dotenv==1.0.1",
     "sqlalchemy==2.0.40",
+    "python-multipart==0.0.20"
 ]
