@@ -4,14 +4,11 @@ from enum import Enum
 
 
 class ModelCreateSchema(BaseModel):
-    name: str = Field(..., description="사용자 입력 모델 이름")
+    name: str = Field(..., description="사용자 입력 모델 이름 (e.g.HuggingFace 모델 이름)")
     description: str = Field(..., description="모델에 대한 설명")
-    task: str = Field(..., description="모델이 하는 일 e.g. 'Text Generation'")
-    type: str = Field(..., description="모델 종류 e.g. 'LLM, Embedding, Re-Rank'")
-    format: str = Field(..., description="모델 포맷 e.g. 'gguf, transformers, ...'")
-    version: str = Field(..., description="모델 버전 e.g. '1.0.0'")
-    model_id: str = Field(..., description="Qwen/QwQ-23B-Preview")
-    params: float = Field(..., description="모델 파라미터 e.g. 32B")
+    model_provider_id: int = Field(..., description="모델 제공자 ID (1: HuggingFace, 2: Ollama, 3: Custom)")
+    model_type_id: int = Field(..., description="모델 타입 ID (1: LLM, 2: Embedding, 3: Re-Rank, 4: Fine-Tuned)")
+    model_format_id: int = Field(..., description="모델 포맷 ID (1: Transformers, 2: Sentence-Transformers, 3: GGUF, 4: BGE-M3)")
 
 
 class ModelUpdateSchema(BaseModel):
