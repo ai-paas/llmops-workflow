@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import List, Optional, Generic, TypeVar, Dict
 from datetime import datetime
@@ -16,24 +17,64 @@ class MLflowInfoResponse(BaseModel):
     artifact_uri: str = Field(..., description="MLflow Artifact URI")
     model_uri: str = Field(..., description="MLflow Model URI")
 
-class ModelResponse(BaseModel):
-    id: str = Field(..., description="모델 고유 ID")
-    name: str = Field(..., description="사용자 입력 모델 이름")
-    description: str = Field(..., description="모델에 대한 설명")
-    task: str = Field(..., description="모델이 하는 일")
-    type: str = Field(..., description="모델 종류")
-    format: str = Field(..., description="모델 포맷")
-    version: str = Field(..., description="모델 버전")
-    model_id: str = Field(..., description="모델 ID")
-    params: float = Field(..., description="모델 파라미터")
-    file_path: Optional[str] = Field(None, description="업로드된 모델 파일 경로")
-    mlflow_info: MLflowInfoResponse = Field(..., description="MLflow 정보")
-    created_at: datetime = Field(..., description="생성 시간")
-    updated_at: datetime = Field(..., description="수정 시간")
+    
+    
+class ModelResponseSchema(BaseModel):
+    id: int = Field(..., description="모델 고유 ID")
+    name: str = Field(..., description="모델 이름")
+    description: str = Field(..., description="모델 설명")
+    model_provider: ModelProviderReadSchema = Field(..., description="모델 제공자 정보")
+    model_type: ModelTypeReadSchema = Field(..., description="모델 타입 정보")
+    model_format: ModelFormatReadSchema = Field(..., description="모델 포맷 정보")
+    model_registry: ModelRegistryReadSchema | None = Field(None, description="모델 레지스트리 정보")
+
+    class Config:
+        from_attributes = True
+
+
+class ModelProviderReadSchema(BaseModel):
+    id: int = Field(..., description="모델 제공자 ID")
+    name: str = Field(..., description="모델 제공자 이름")
+    description: str = Field(..., description="모델 제공자 설명")
+    link: str = Field(..., description="모델 제공자 링크")
+
+    class Config:
+        from_attributes = True
+
+
+class ModelTypeReadSchema(BaseModel):
+    id: int = Field(..., description="모델 타입 ID")
+    name: str = Field(..., description="모델 타입 이름")
+    description: str = Field(..., description="모델 타입 설명")
+
+    class Config:
+        from_attributes = True
+
+
+class ModelFormatReadSchema(BaseModel):
+    id: int = Field(..., description="모델 포맷 ID")
+    name: str = Field(..., description="모델 포맷 이름")
+    description: str = Field(..., description="모델 포맷 설명")
+
+    class Config:
+        from_attributes = True
+        
+        
+class ModelRegistryReadSchema(BaseModel):
+    id: int = Field(..., description="모델 레지스트리 ID")
+    run_id: str = Field(..., description="MLflow Run ID")
+    version: int = Field(..., description="모델 버전")
+    artifact_path: str = Field(..., description="아티팩트 경로")
+    model_uri: str = Field(..., description="모델 URI")
+    model_id: int = Field(..., description="모델 ID")
+
+    class Config:
+        from_attributes = True
+
 
 class ModelListResponse(BaseModel):
     total: int = Field(..., description="전체 모델 수")
-    models: List[ModelResponse] = Field(..., description="모델 목록")
+    models: List[ModelResponseSchema] = Field(..., description="모델 목록")
 
 class BasicInfoResponse(BaseModel):
     name: str = Field(..., description="데이터셋 이름")

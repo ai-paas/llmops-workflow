@@ -1,87 +1,66 @@
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
-from typing import Optional
-import uuid
-from datetime import datetime
+from fastapi import APIRouter, UploadFile, File, Form
+from typing import Annotated, Optional
+from sqlalchemy.orm import Session
 
-from schemas.apis.request import ModelCreateSchema, ModelUpdateSchema
-from schemas.apis.response import ModelResponse, ModelListResponse, ResponseFormatSchema
+from schemas.apis.request import ModelCreateSchema
+from schemas.apis.response import ModelResponseSchema, ResponseFormatSchema
+from config.db.connect import SessionDepends
+from services.model_service import ModelService
 
 router = APIRouter(prefix="/models", tags=["Models"])
 
-@router.post("", response_model=ResponseFormatSchema[ModelResponse], status_code=201)
+
+@router.post("", response_model=ResponseFormatSchema[ModelResponseSchema], status_code=201)
 async def create_model(
-    model: ModelCreateSchema = Form(...),
-    model_file: Optional[UploadFile] = File(None)
+    *,
+    db: Session = SessionDepends,
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()],
+    model_provider_id: Annotated[int, Form()],
+    model_type_id: Annotated[int, Form()],
+    model_format_id: Annotated[int, Form()],
+    model_file: UploadFile | None = None,
 ):
     """
-    새로운 모델을 생성합니다.
-    모델 파일을 업로드할 수 있습니다.
+    새로운 모델을 생성하고 MLflow 레지스트리에 등록합니다.
+    
+    모델 정보를 데이터베이스에 저장하고, 모델 유형에 따라 적절한 MLflow 레지스트리에 등록합니다.
+    모델 제공자(HuggingFace, Ollama, Custom)와 모델 형식(Transformers, Sentence-Transformers, GGUF, BGE-M3)에 
+    따라 다른 로직으로 처리됩니다.
+    
+    Args:
+        db (Session): 데이터베이스 세션 객체
+        model (ModelCreateSchema): 생성할 모델의 정보
+            - name: 모델 이름
+            - description: 모델 설명
+            - model_provider_id: 모델 제공자 ID (1: HuggingFace, 2: Ollama, 3: Custom)
+            - model_type_id: 모델 타입 ID (1: LLM, 2: Embedding, 3: Re-Rank, 4: Fine-Tuned)
+            - model_format_id: 모델 포맷 ID (1: Transformers, 2: Sentence-Transformers, 3: GGUF, 4: BGE-M3)
+        model_file (Optional[UploadFile]): Custom 모델인 경우 업로드할 모델 파일 (GGUF 형식)
+        
+    Returns:
+        ResponseFormatSchema[ModelResponseSchema]: 생성된 모델 정보와 응답 상태를 포함한 응답 객체
+            - status: HTTP 상태 코드 (201)
+            - message: 응답 메시지
+            - data: 생성된 모델 정보
+        
+    Raises:
+        HTTPException: 모델 생성 중 오류가 발생한 경우 (지원하지 않는 모델 형식, 파일 업로드 실패 등)
+        ValueError: 지원하지 않는 모델 형식이 제공된 경우
     """
-    # TODO: 실제 구현에서는 파일 저장 및 모델 정보 저장 로직 추가
-    model_id = str(uuid.uuid4())
-    file_path = None
+    model = ModelCreateSchema(
+        name=name,
+        description=description,
+        model_provider_id=model_provider_id,
+        model_type_id=model_type_id,
+        model_format_id=model_format_id,
+    )
     
-    if model_file:
-        # TODO: 파일 저장 로직 구현
-        file_path = f"models/{model_id}/{model_file.filename}"
-    
-    model_data = {
-        "id": model_id,
-        **model.model_dump(),
-        "file_path": file_path,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat()
-    }
+    result = ModelService().create_model(db, model)
     
     return ResponseFormatSchema(
         status=201,
         pagination=None,
         message="Model created successfully",
-        data=model_data
+        data=result
     )
-
-@router.get("", response_model=ResponseFormatSchema[ModelListResponse])
-async def list_models(
-    skip: int = Query(0, description="건너뛸 항목 수"),
-    limit: int = Query(10, description="가져올 항목 수"),
-    search: Optional[str] = Query(None, description="검색어")
-):
-    """
-    모델 목록을 조회합니다.
-    """
-    # TODO: 실제 구현에서는 데이터베이스 조회 로직 추가
-    return ResponseFormatSchema(
-        status=200,
-        message="Models retrieved successfully",
-        pagination={"skip": skip, "limit": limit, "total": 0},
-        data={"total": 0, "models": []}
-    )
-
-@router.get("/{model_id}", response_model=ResponseFormatSchema[ModelResponse])
-async def get_model(model_id: str):
-    """
-    특정 모델의 상세 정보를 조회합니다.
-    """
-    # TODO: 실제 구현에서는 데이터베이스 조회 로직 추가
-    raise HTTPException(status_code=404, detail="Model not found")
-
-@router.put("/{model_id}", response_model=ResponseFormatSchema[ModelResponse])
-async def update_model(
-    model_id: str,
-    model: ModelUpdateSchema = Form(...),
-    model_file: Optional[UploadFile] = File(None)
-):
-    """
-    특정 모델의 정보를 수정합니다.
-    모델 파일을 업로드할 수 있습니다.
-    """
-    # TODO: 실제 구현에서는 데이터베이스 업데이트 및 파일 저장 로직 추가
-    raise HTTPException(status_code=404, detail="Model not found")
-
-@router.delete("/{model_id}", response_model=ResponseFormatSchema)
-async def delete_model(model_id: str):
-    """
-    특정 모델을 삭제합니다.
-    """
-    # TODO: 실제 구현에서는 데이터베이스 삭제 및 파일 삭제 로직 추가
-    raise HTTPException(status_code=404, detail="Model not found")

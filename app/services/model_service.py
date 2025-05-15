@@ -2,22 +2,85 @@ import tempfile
 from typing import Any
 
 from fastapi import UploadFile
-from FlagEmbedding import BGEM3FlagModel
 from llama_cpp import Llama
-from repos.model import model_registry_repository, model_repository
+from repos.model import model_registry_repository, model_repository, model_format_repository
 from schemas.model import (
     ModelBaseSchema,
     ModelReadSchema,
     ModelRegistryBaseSchema,
-    ModelRegistryReadSchema,
 )
+from FlagEmbedding import BGEM3FlagModel
+from schemas.apis.request import ModelCreateSchema
 from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
-from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from util.model_registry import ModelLoader, ModelRegistry
+from util.model_loader import HuggingFaceModelLoader
+from util.mlflow_model_registry import ModelRegistryFactory, MLflowConnectionManager
+from config.settings import get_settings
+
+
+settings = get_settings()
 
 
 class ModelService:
+    def create_model(self, db: Session, model_schema: ModelCreateSchema) -> ModelReadSchema:
+        """모델을 생성하고 MLflow 레지스트리에 등록합니다.
+        
+        주어진 모델 스키마를 기반으로 모델을 생성하고, MLflow 레지스트리에 등록한 후
+        데이터베이스에 모델 정보를 저장합니다.
+        
+        Args:
+            db: 데이터베이스 세션 객체
+            model_schema: 모델 생성에 필요한 기본 정보를 담은 스키마
+            
+        Returns:
+            ModelReadSchema: 생성된 모델의 정보
+            
+        Raises:
+            ValueError: 지원하지 않는 모델 형식이 제공된 경우
+        """
+        model_format_name: str = model_format_repository.get(db, model_schema.model_format_id).name
+        mlflow_flavor: str = "transformers" if model_format_name == "transformers" else "pyfunc"
+        registry = ModelRegistryFactory.create_registry(
+                mlflow_flavor,
+                model_schema.name,
+                connection_manager=MLflowConnectionManager(
+                    tracking_uri=settings.MLFLOW_TRACKING_URI,
+                    experiment_name=settings.MLFLOW_EXPERIMENT_NAME
+                )
+            )
+        
+        if model_format_name == "transformers":
+            model = HuggingFaceModelLoader.load_transformers(model_schema.name)
+        elif model_format_name == "sentence-transformers":
+            model = HuggingFaceModelLoader.load_sentence_transformers(model_schema.name)
+        elif model_format_name == "gguf":
+            model = HuggingFaceModelLoader.load_gguf(model_schema.name, model_schema.name)
+        elif model_format_name == "bge-m3":
+            model = HuggingFaceModelLoader.load_bge_m3(model_schema.name)
+        else:
+            raise ValueError(f"Invalid model format: {model_format_name}")
+        
+        model_name = model_schema.name.replace("/", "_")
+        artifact_path = f"{model_format_name}_{model_name}"
+        run_id = registry.log_model(model, artifact_path)
+        # 모델 등록
+        model_uri, model_version = registry.register_model(run_id, artifact_path)
+        # 모델 단계 변경
+        registry.transition_model_version(model_version, 'Production')
+        model_obj = model_repository.create(db, obj_in=model_schema)
+        model_id = model_obj.id
+        model_registry_repository.create(
+            db,
+            obj_in=ModelRegistryBaseSchema(
+                run_id=run_id, version=int(model_version), artifact_path=artifact_path, model_uri=model_uri, model_id=model_id
+            ),
+        )
+        db.commit()
+        
+        return model_repository.get(db, pk=model_id)
+    
     def get(self, db: Session, pk: int) -> ModelReadSchema:
         return model_repository.get(db, pk)
 
@@ -55,6 +118,7 @@ class ModelService:
         return loaded_pipe
 
 
+
 class HuggingFaceModelService:
     def create(self, model_schema: ModelBaseSchema, db: Session):
         model_format_id = model_schema.model_format_id
@@ -81,7 +145,7 @@ class HuggingFaceModelService:
         model_registry_obj = model_registry_repository.create(
             db,
             obj_in=ModelRegistryBaseSchema(
-                run_id=run_id, version=model_version, artifact_path=artifact_uri, model_uri=model_uri, model_id=model_id
+                run_id=run_id, version=int(model_version), artifact_path=artifact_uri, model_uri=model_uri, model_id=model_id
             ),
         )
         db.commit()
@@ -171,7 +235,7 @@ class CustomModelService:
         model_registry_obj = model_registry_repository.create(
             db,
             obj_in=ModelRegistryBaseSchema(
-                run_id=run_id, version=model_version, artifact_path=artifact_uri, model_uri=model_uri, model_id=model_id
+                run_id=run_id, version=int(model_version), artifact_path=artifact_uri, model_uri=model_uri, model_id=model_id
             ),
         )
         db.commit()
