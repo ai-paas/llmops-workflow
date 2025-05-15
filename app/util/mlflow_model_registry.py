@@ -228,11 +228,10 @@ class PyFuncModelRegistry(ModelRegistryBase):
                 mlflow.pyfunc.log_model(
                     artifact_path=artifact_path,
                     python_model=model,
-                    model_signature=model_signature,
-                    **kwargs
                 )
                 logger.info(f"Successfully logged pyfunc model to {artifact_path}")
-                return run.info.run_id
+                run_id = run.info.run_id
+                return run_id
         except Exception as e:
             logger.error(f"Failed to log pyfunc model: {str(e)}")
             raise
