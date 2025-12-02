@@ -1,5 +1,11 @@
 # RAG-Workflow
 
+> **⚠️ 프로젝트 통합 안내**
+> 
+> 현재 프로젝트는 프로젝트 구조상 ml-workflow에 통합되었습니다. 
+> 
+> 이후 최신 변경점들을 확인하려면 aipaas 프로젝트의 ml-workflow repository를 확인하세요.
+
 RAG-Workflow는 지식 데이터를 벡터화하여 효과적으로 관리하고, 등록된 지식을 기반으로 사용자의 질의에 적합한 답변을 생성할 수 있도록 설계된 시스템입니다. 사용자는 이 시스템을 통해 대규모의 비정형 데이터를 처리하고, 그에 맞는 적절한 응답을 받을 수 있습니다.
 
 ## Tech Stack
@@ -54,5 +60,4 @@ alembic head
 # Get Started
 
 # License
-
 
